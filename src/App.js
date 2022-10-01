@@ -1,10 +1,12 @@
 import "./App.css";
 import DiaryEditor from "./DiaryEditor";
+import DiaryList from "./DiaryList";
 
 function App() {
   return (
     <div className="App">
-      <DiaryEditor></DiaryEditor>
+      <DiaryEditor />
+      <DiaryList diaryList={[]} />
     </div>
   );
 }
