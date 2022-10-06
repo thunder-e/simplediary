@@ -1,12 +1,39 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import "./App.css";
 import DiaryEditor from "./DiaryEditor";
 import DiaryList from "./DiaryList";
 //import OptimizeTest from "./OptimizeTest";
 //import Lifecycle from "./Lifecycle";
 
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "INIT": {
+      return action.data;
+    }
+    case "CREATE": {
+      const created_date = new Date().getTime();
+      const newItem = {
+        ...action.data,
+        created_date,
+      };
+      return [newItem, ...state];
+    }
+    case "REMOVE": {
+      return state.filter((it) => it.id !== action.targetId);
+    }
+    case "EDIT": {
+      return state.map((it) =>
+        it.id === action.targetId ? { ...it, content: action.newContent } : it
+      );
+    }
+    default:
+      return state;
+  }
+};
+
 function App() {
-  const [data, setData] = useState([]); //[] App component, DiaryEditor 한번씩 렌더링
+  // const [data, setData] = useState([]);
+  const [data, dispatch] = useReducer(reducer, []); // reducer : 상태변화를 처리할 함수 , state의 초기값
 
   const dataId = useRef(0);
 
@@ -25,38 +52,28 @@ function App() {
       };
     });
 
-    setData(initData); // dataState가 한번 더 렌더링
+    dispatch({ type: "INIT", data: initData });
   };
 
   useEffect(() => {
     getData();
   }, []); // 빈배열 -> 콜백함수는 앱컴포넌트가 탄생(mount)되는 시점에 실행됨
 
+  //useCallback : 함수의 재생성
   const onCreate = useCallback((author, content, emotion) => {
-    //useCallback : 함수의 재생성
-    const created_date = new Date().getTime();
-    const newItem = {
-      author,
-      content,
-      emotion,
-      created_date,
-      id: dataId.current,
-    };
+    dispatch({
+      type: "CREATE",
+      data: { author, content, emotion, id: dataId.current },
+    });
     dataId.current += 1;
-
-    setData((data) => [newItem, ...data]); //함수형 업데이트 : 상태변화 함수(setState)에 함수를 전달 -> 항상 최신의 state값을 받아올 수 있음
   }, []); //onCreate에 useCallback을 사용하고 의존성 배열을 빈 값으로 두면 mount시에 한번만 실행되기 때문에 data state가 초기값인 빈 배열인 상태 => 해결위해 함수형 업데이트를 사용
 
   const onRemove = useCallback((targetId) => {
-    setData((data) => data.filter((it) => it.id !== targetId)); // 최신 state를 이용하기 위해서는 함수형 업데이트에 인자부분과 return 부분에 data를 사용해야 한다.
+    dispatch({ type: "REMOVE", targetId });
   }, []);
 
   const onEdit = useCallback((targetId, newContent) => {
-    setData((data) =>
-      data.map((it) =>
-        it.id === targetId ? { ...it, content: newContent } : it
-      )
-    );
+    dispatch({ type: "EDIT", targetId, newContent });
   }, []);
 
   // 연산 최적화 = useMemo
